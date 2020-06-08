@@ -1,0 +1,488 @@
+package mini2;
+
+import api.Combiner;
+
+/**
+ * Combiner that appends the first letter of a string onto
+ * the accumulator.  If the string is empty, returns the 
+ * accumulator.
+ */
+public  class FirstLetterCombiner implements Combiner<String>
+{
+  public String combine(String obj, String s)
+  {
+	  if(s.length() == 0)
+	  {
+		  return obj;
+	  }
+	  
+	return obj + s.charAt(0);
+
+  }
+}
+
+
+
+
+
+package mini2;
+
+import api.Combiner;
+
+/**
+ * Adds the length of the given string to the accumulator
+ * and returns the result.
+ */
+public class LengthCombiner implements Combiner<Integer>
+{
+  public Integer combine(Integer obj, String s)
+  {
+	  return obj + s.length();
+  }
+}
+
+
+
+
+
+package mini2;
+
+import api.Transformation;
+
+/**
+ * Transformation whose <code>apply</code> method prepends a line number to each string.  
+ * For a newly created LineNumberer, the line numbers start at 1 and increase on
+ * each successive call.  The line number is left-justified in a field 5 spaces wide.
+ */
+public class LineNumberer implements Transformation
+{
+	private int count = 0;
+	
+	@Override
+  public String apply(String s)
+  {
+	  count++;
+	  return s.format("%-5d%s", count, s);
+	 /** String res = "";
+	  String [] lines = s.split("\n");
+	  
+	  for(int i = 0; i < lines.length; i++)
+	  {
+		  res += (i + 1) + "" + lines[i];
+	  }
+	  
+	  return res;
+	  **/
+  }
+}
+
+
+
+
+
+package mini2;
+
+import api.Selector;
+
+/**
+ * Selector that returns false if the current string is
+ * within a javadoc comment, true otherwise.  Using a NonJavadocSelector
+ * in the filter method of a StringList has the effect of removing all
+ * javadoc comments.  Note that we are assuming that javadoc comments
+ * always start and end on different lines, and that no executable
+ * code ever appears on the same line as a javadoc comment.
+ */
+public class NonJavadocSelector implements Selector
+{
+	public boolean select(String s)
+	{
+		if(s.length() < 2)
+		{
+			return true;
+		}
+		
+		if(s.charAt(0) == '*' && s.charAt(1) == ' ')
+		{
+			return false;
+		}
+		
+		if(s.contains("/**") || s.contains("/**\n"))
+		{
+			return false;
+		}
+		
+		if(s.contains("*/") || s.contains("*/\n"))
+		{
+			return false;
+		}
+	return true;
+	}
+}
+
+
+
+
+
+package mini2;
+
+import api.Selector;
+
+/**
+ * Selector whose <code>select</code> method returns false for strings whose first non-whitespace
+ * text is "//", and true for all other strings.
+ */
+public class NonLineCommentSelector implements Selector
+{
+  public boolean select(String s)
+  {
+	  s = s.trim();
+	  
+	  if(s.trim().startsWith("//"))
+	  {
+		  return false;
+	  }
+	  return true;
+  }
+}
+
+
+
+
+
+package mini2;
+
+import java.awt.Point;
+import java.util.Scanner;
+
+import api.Converter;
+import plotter.Polyline;
+
+/**
+ * Converts a string into a <code>Polyline</code> object.  The given 
+ * string must conform to the format specified for one valid line of the file 
+ * as described in Lab 8, checkpoint 2.  See
+ * <pre>
+ * http://web.cs.iastate.edu/~cs227/labs/lab8/page12.html
+ * </pre>
+ */
+public class PolylineConverter implements Converter<Polyline>
+{
+	@Override
+  public Polyline convert(String s)
+  {
+	Polyline poly;
+	Scanner scan = new Scanner(s);
+	if(scan.hasNextInt())
+	{
+		int width = scan.nextInt();
+		String color = scan.next();
+		poly = new Polyline(color,width);
+	}
+	else
+	{
+		String color = scan.next();
+		poly = new Polyline(color);
+	}
+	while(scan.hasNextInt())
+	{
+		int x = scan.nextInt();
+		int y = scan.nextInt();
+		Point p = new Point(x,y);
+		poly.addPoint(p);
+	}
+	return poly;
+}
+}
+
+
+
+
+
+package mini2;
+
+import api.Combiner;
+
+/**
+ * Combiner whose <code>combine</code> method, given an Integer n and a string, 
+ * returns n if the string is a blank line or a line containing
+ * a single curly brace; otherwise returns n + 1.  (A curly brace on a line whose
+ * only other text is an end-of-line comment is treated as just a curly brace.)
+ * Using a SlocCounter in the reduce method has the general effect of counting 
+ * the number of "source lines of code" that are actual program statements,
+ * assuming that line comments and javadoc comments have already been
+ * filtered out.
+ */
+public class SlocCounter implements Combiner<Integer>
+{
+	@Override
+	public Integer combine(Integer obj, String s)
+	{
+		if(s.trim().length() == 1) 
+		{
+			if(s.trim().length() == 0 || s.trim().contains("{") || s.trim().startsWith("//"))
+			{
+				return obj;
+			}
+		}
+		else if(s.trim().length() == 0 || s.trim().contains("{") || s.trim().startsWith("//"))
+		{
+			return obj;
+		}
+		else if(s.trim().length() > 1)
+		{
+			return obj + 1;
+		}
+		else {
+			return obj + 1;
+		}
+		return obj;
+	}
+}
+
+
+
+
+
+package mini2;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+import api.Combiner;
+import api.Converter;
+import api.Selector;
+import api.Transformation;
+
+/**
+ * A StringList represents a specialized list of strings that supports 
+ * a set of operations called <em>map</em>, <em>filter</em>, 
+ * <em>reduce</em>, and <em>reduceToList</em>.  The argument to each 
+ * of these methods is an interface type representing 
+ * an operation to be performed on the list.
+ */
+public class StringList
+{
+  /**
+   * The actual strings making up this StringList object.
+   */
+  private ArrayList<String> data;
+  
+  /**
+   * Constructs an empty StringList.
+   */
+  public StringList()
+  {
+    data = new ArrayList<>();
+  }
+  
+  /**
+   * Constructs a StringList using the given array. 
+   * @param strings
+   *   an array of strings
+   */
+  public StringList(String[] strings)
+  {
+    data = new ArrayList<>();
+    for (String d : strings)
+    {
+      data.add(d);
+    }
+  }
+  
+  /**
+   * Constructs a StringList using the given list. 
+   * @param strings
+   *   an ArrayList of strings
+   */
+  public StringList(ArrayList<String> strings)
+  {
+    data = new ArrayList<>();
+    for (String d : strings)
+    {
+      data.add(d);
+    }
+  }
+  
+  /**
+   * Constructs a StringList from the given file, where each line
+   * of the file becomes one item in the StringList.
+   * @param filename
+   * @throws FileNotFoundException
+   */
+  public StringList(String filename) throws FileNotFoundException
+  {
+    data = new ArrayList<>();
+    Scanner in = new Scanner(new File(filename));
+    while (in.hasNextLine())
+    {
+      data.add(in.nextLine());
+    }
+    in.close();
+  }
+  
+  /**
+   * Appends the given string to the end of this StringList.
+   * @param s
+   *   string to be appended
+   */
+  public void append(String s)
+  {
+    data.add(s);
+  }
+  
+  /**
+   * Returns the string at the given position in this StringList.
+   * @param index
+   *   position of string to return
+   * @return
+   *   string at given position
+   */
+  public String get(int index)
+  {
+    return data.get(index);
+  }
+  
+  /**
+   * Returns the number of elements in this StringList.
+   * @return
+   *   number of elements in this StringList
+   */
+  public int size()
+  {
+    return data.size();
+  }
+  
+  /**
+   * Returns a new StringList obtained by applying the given Transformation to 
+   * every string in this StringList.  This StringList is not modified.
+   * @param transform
+   *   a Transformation object
+   * @return
+   *   a new StringList 
+   */
+  public StringList map(Transformation transform)
+  {
+    StringList result = new StringList();
+    for (String d : data)
+    {
+      String newString = transform.apply(d);
+      result.append(newString);
+    }
+    return result;
+  }
+  
+  /**
+   * Returns a new StringList consisting of just the strings that are 
+   * chosen by the given Selector.
+   * @param selector
+   *   the Selector to use for selecting the strings in the result
+   * @return
+   *   a new StringList
+   */
+  public StringList filter(Selector selector)
+  {
+    StringList res = new StringList();
+    
+    for(String s : data)
+    {
+    	if(selector.select(s)) 
+    	{
+    		res.data.add(s);
+    	}
+    }
+    return res;
+  }
+  
+  /**
+   * Combines all strings in this list into a single value of type T
+   * using the given Combiner object and the given initial value.  If this 
+   * StringList is empty, this method just returns the given initial value.
+   * @param combiner
+   *   the operation to be applied to successive strings
+   * @param initialValue
+   *   the initial value that is combined with the first element 
+   * @return
+   *   result
+   */
+  public <T> T reduce(Combiner<T> combiner, T initialValue)
+  {
+    T result = initialValue;
+    for (String d : data)
+    {
+      result = combiner.combine(result, d);
+    }
+    return result;
+  }
+ 
+  /**
+   * Returns a list of objects obtained by applying the given
+   * conversion to each string in this StringList.
+   * @param converter
+   *   a Converter object for converting strings to type T
+   */
+  public <T> ArrayList<T> mapToList(Converter<T> converter)
+  {
+    ArrayList<T> res = new ArrayList<T>();
+    
+    for(String s : data)
+    {
+    	res.add(converter.convert(s));
+    }
+    return res;
+  }
+  
+  /**
+   * Returns a single string representing the contents of this StringList
+   * based on the format of java.util.ArrayList.
+   * @return
+   *   string representation of this list
+   */
+  public String toString()
+  {
+    return data.toString();
+  }
+
+  /**
+   * Writes the contents of this StringList to the given
+   * output stream, one line per item.
+   * @param out
+   *   given output stream
+   */
+  public void toOutputStream(PrintStream out)
+  {
+    for (String s : data)
+    {
+      out.println(s);
+    }
+  }
+}
+
+
+
+
+
+package mini2;
+
+import api.Selector;
+
+/**
+ * Selector that returns false for a strings that are
+ * empty, that are all whitespace, or whose first non-whitespace
+ * character is the '#' character.
+ */
+public class ValidLineSelector implements Selector
+{
+  public boolean select(String s)
+  {
+	  s = s.trim();
+	 
+	  if(s.length() == 0 || s.charAt(0) == '#')
+	  {
+		  return false;
+	  }
+	  return true;
+  }
+}
